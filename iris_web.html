@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iris Species Predictor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .api-input {
+            margin-bottom: 20px;
+        }
+
+        .api-input input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            text-align: center;
+            display: none;
+        }
+
+        .result.show {
+            display: block;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result img {
+            max-width: 200px;
+            height: auto;
+            border-radius: 12px;
+            margin: 20px auto;
+            display: block;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .species-name {
+            font-size: 24px;
+            font-weight: 700;
+            color: #667eea;
+            margin-top: 15px;
+        }
+
+        .error {
+            color: #e74c3c;
+            background: #fadbd8;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        .loading {
+            text-align: center;
+            color: #667eea;
+            font-weight: 600;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .loading.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌸 Iris Species Predictor</h1>
+        
+
+        <div class="input-group">
+            <label>Sepal Length (cm)</label>
+            <input type="number" id="sepalLength" step="0.1" placeholder="e.g., 5.1" required>
+        </div>
+
+        <div class="input-group">
+            <label>Sepal Width (cm)</label>
+            <input type="number" id="sepalWidth" step="0.1" placeholder="e.g., 3.5" required>
+        </div>
+
+        <div class="input-group">
+            <label>Petal Length (cm)</label>
+            <input type="number" id="petalLength" step="0.1" placeholder="e.g., 1.4" required>
+        </div>
+
+        <div class="input-group">
+            <label>Petal Width (cm)</label>
+            <input type="number" id="petalWidth" step="0.1" placeholder="e.g., 0.2" required>
+        </div>
+
+        <button onclick="predictSpecies()">Predict Species</button>
+
+        <div class="loading" id="loading">Predicting...</div>
+        <div class="error" id="error"></div>
+
+        <div class="result" id="result">
+            <img id="speciesImage" src="" alt="Iris Species">
+            <div class="species-name" id="speciesName"></div>
+        </div>
+    </div>
+
+    <script>
+        const speciesImages = {
+            'setosa': 'https://upload.wikimedia.org/wikipedia/commons/5/56/Kosaciec_szczecinkowaty_Iris_setosa.jpg',
+            'versicolor': 'https://upload.wikimedia.org/wikipedia/commons/4/41/Iris_versicolor_3.jpg',
+            'virginica': 'https://upload.wikimedia.org/wikipedia/commons/9/9f/Iris_virginica.jpg'
+        };
+
+        async function predictSpecies() {
+            const apiUrl = "http://localhost:8000/predict"
+            const sepalLength = parseFloat(document.getElementById('sepalLength').value);
+            const sepalWidth = parseFloat(document.getElementById('sepalWidth').value);
+            const petalLength = parseFloat(document.getElementById('petalLength').value);
+            const petalWidth = parseFloat(document.getElementById('petalWidth').value);
+
+            const error = document.getElementById('error');
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+
+            error.classList.remove('show');
+            result.classList.remove('show');
+
+            if (!apiUrl) {
+                error.textContent = 'Please enter an API endpoint URL';
+                error.classList.add('show');
+                return;
+            }
+
+            if (isNaN(sepalLength) || isNaN(sepalWidth) || isNaN(petalLength) || isNaN(petalWidth)) {
+                error.textContent = 'Please fill in all measurement fields with valid numbers';
+                error.classList.add('show');
+                return;
+            }
+
+            const data = {
+                data: [sepalLength, sepalWidth, petalLength, petalWidth]
+            };
+
+            loading.classList.add('show');
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                loading.classList.remove('show');
+
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status} ${response.statusText}`);
+                }
+
+                const prediction = await response.json();
+                
+                let species = prediction.predictions[0];
+
+                let spe = {0:"setosa",
+                1:"versicolor",
+                2:"virginica"
+                }
+                console.log(species);
+                species = spe[species].toLowerCase().trim();
+                
+                
+                
+                const speciesDisplay = species.charAt(0).toUpperCase() + species.slice(1);
+                
+                const imageUrl = speciesImages[species] || speciesImages['setosa'];
+                
+                document.getElementById('speciesImage').src = imageUrl;
+                document.getElementById('speciesName').textContent = `Iris ${speciesDisplay}`;
+                result.classList.add('show');
+
+            } catch (err) {
+                loading.classList.remove('show');
+                error.textContent = `Error: ${err.message}. Please check your API endpoint and try again.`;
+                error.classList.add('show');
+            }
+        }
+
+        document.querySelectorAll('input[type="number"]').forEach(input => {
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    predictSpecies();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
