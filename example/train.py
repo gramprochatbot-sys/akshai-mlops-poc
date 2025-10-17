@@ -1,3 +1,6 @@
+"""
+smoke test
+"""
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -6,9 +9,9 @@ args = parser.parse_args()
 
 if args.smoke_test:
     # Run a very short training loop
-    n_epochs = 1
-    subset_size = 50
+    N_EPOCHS = 1
+    SUBSET_SIZE = 50
 else:
     # Normal full training
-    n_epochs = 100
-    subset_size = None
+    N_EPOCHS = 100
+    SUBSET_SIZE = None
